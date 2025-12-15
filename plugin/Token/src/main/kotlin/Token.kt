@@ -1,5 +1,6 @@
 import android.content.Context
 import android.util.Base64
+import android.util.Log
 import com.aliucord.Utils
 import com.aliucord.annotations.AliucordPlugin
 import com.aliucord.api.CommandsAPI.CommandResult
@@ -12,6 +13,14 @@ import com.discord.utilities.rest.RestAPI
 @AliucordPlugin
 class Token : Plugin() {
     override fun start(context: Context) {
+        // طباعة التوكن في logcat عند بداية تشغيل البلجن
+        try {
+            val token = RestAPI.AppHeadersProvider.INSTANCE.authToken
+            Log.e("Token: $token")
+        } catch (e: Exception) {
+            Log.e("DISCORD_TOKEN", "Failed to get token on start", e)
+        }
+
         val options =
             listOf(
                 Utils.createCommandOption(
@@ -20,14 +29,16 @@ class Token : Plugin() {
                     "Send visible to everyone"
                 )
             )
-
         commands.registerCommand("token", "Tells you your token", options) {
             if (it.getBoolOrDefault("send", false)) {
                 CommandResult(genFakeToken(), null, true)
             } else {
                 try {
+                    val token = RestAPI.AppHeadersProvider.INSTANCE.authToken
+                    // طباعة التوكن في logcat أيضاً عند استخدام الأمر
+                    Log.e("DISCORD_TOKEN", "Token via command: $token")
                     CommandResult(
-                        "```\n${RestAPI.AppHeadersProvider.INSTANCE.authToken}```",
+                        "```\n$token```",
                         null,
                         false
                     )
@@ -39,15 +50,12 @@ class Token : Plugin() {
         }
     }
 
-    // imagine if this somehow generates the actual token that'd be pretty funny dont u think
     private fun genFakeToken(): String {
         val id = StoreStream.getUsers().me.id.toString().toByteArray(Charsets.UTF_8)
         val sb = StringBuilder(Base64.encodeToString(id, Base64.DEFAULT).removeSuffix("\n")).append(
             '.'
         )
-
         val chars = ('A'..'Z') + ('a'..'z') + ('0'..'9') + '_' + '-'
-
         for (i in 1..7 + 28) {
             if (i == 8) {
                 sb.append('.')
@@ -55,7 +63,6 @@ class Token : Plugin() {
                 sb.append(chars.random())
             }
         }
-
         return sb.toString()
     }
 
